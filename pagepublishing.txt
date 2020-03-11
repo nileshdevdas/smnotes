@@ -1,0 +1,9 @@
+pages:
+  stage: publish
+  script:
+    - mvn surefire-report:report
+    - mvn site:site
+    - mv target/site/ public/
+  artifacts:
+    paths:
+      - "public"
