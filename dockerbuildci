@@ -1,0 +1,7 @@
+
+buildimage:
+  stage: deploy
+  script: 
+    - docker build -t nileshvinsys/devops:$BASE_VERSION$CI_PIPELINE_IID ./docker
+    - docker login --username $DOCKER_USER --password $DOCKER_PASS
+
