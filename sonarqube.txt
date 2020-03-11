@@ -1,0 +1,7 @@
+ <properties>
+        <java.version>1.8</java.version>
+        <!-- Optional URL to server. Default value is http://localhost:9000 -->
+        <sonar.host.url>
+            http://host03.example.com:9000
+        </sonar.host.url>
+    </properties>
