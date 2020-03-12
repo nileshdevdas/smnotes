@@ -1,0 +1,70 @@
+variables:
+  GIT_DEPTH: 0
+  SONAR_HOST_URL: "http://host03.example.com"
+  SONAL_GITLAB_MAX_MAJOR_ISSUES_GATE : 0
+
+stages:
+  - init
+  - package
+  - publish
+  - publishreports
+  - qualitycheck
+  - loadtest
+  - deploy
+  - pushtoproduction
+
+init:
+  stage: init
+  script:
+  - ls -l
+  - echo "Cooool "
+
+java:
+  stage: package
+  script: 
+    - mvn clean compile package
+  artifacts:
+    reports: 
+      junit: target/surefire-reports/*.xml
+
+sonarqube-check:
+  stage: qualitycheck
+  script:
+    - mvn verify sonar:sonar -Dsonar.qualitygate.wait=true
+  allow_failure: true
+
+pages:
+  stage: publish
+  script:
+    - mvn surefire-report:report
+    - mvn site:site
+    - mv target/site/ public/
+  artifacts:
+    paths:
+      - "public"
+
+buildimage:
+  stage: deploy
+  script:
+    - mvn package
+    - docker build -t nileshvinsys/devops:$BASE_VERSION.$CI_PIPELINE_IID -f docker/Dockerfile .
+    - docker login --username $DOCKER_USER --password $DOCKER_PASS
+    - docker push  nileshvinsys/devops:$BASE_VERSION.$CI_PIPELINE_IID
+
+loadtest:
+  stage: loadtest
+  script:
+    - mvn package
+    - docker build -t nileshvinsys/devops:$BASE_VERSION.$CI_PIPELINE_IID -f docker/Dockerfile .
+    - docker run  --name TESTCONTAINER -p8989:8080  -d nileshvinsys/devops:$BASE_VERSION.$CI_PIPELINE_IID
+    - export PATH=$PATH:/opt/apache-jmeter-5.2.1/bin
+    - jmeter -n -t loadtest.jmx  -l loadtest.jtl
+
+
+production:
+  stage: pushtoproduction
+  script:
+    - echo " Deploying to Production "
+    - echo " Will run sanity post deploy"
+    - echo " Will send mail on completion"
+    - echo " Will publish artifacts "
