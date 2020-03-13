@@ -1,14 +1,16 @@
 variables:
   GIT_DEPTH: 0
   SONAR_HOST_URL: "http://host03.example.com"
-  SONAL_GITLAB_MAX_MAJOR_ISSUES_GATE : 0
-
+  SONAR_GITLAB_MAX_MAJOR_ISSUES_GATE : 0
+  SONAR_PROJECT_KEY: "abcdef123456"
+  SONAR_TOKEN: "8b1ffa61d979c12a5a94bfa304951d404954d53e"
 stages:
   - init
   - package
   - publish
   - publishreports
   - qualitycheck
+  - cleanuploader
   - loadtest
   - deploy
   - pushtoproduction
@@ -22,17 +24,22 @@ init:
 java:
   stage: package
   script: 
-    - mvn clean compile package
+    - mvn clean package -DskipTests=true
   artifacts:
     reports: 
       junit: target/surefire-reports/*.xml
 
+# common block which can get called from all location (neeeds ,wants)
+
+#issue1 want the build to fail if the quality check for code fails and has any severity
 sonarqube-check:
   stage: qualitycheck
   script:
-    - mvn verify sonar:sonar -Dsonar.qualitygate.wait=true
-  allow_failure: true
+    - echo $SONAR_HOST_URL
+    - mvn --batch-mode verify sonar:sonar -Dsonar.scm.provider=git -Dsonar.login=$SONAR_TOKEN -Dsonar.analysis.mode=preview -Dsonar.gitlab.commit_sha=$CI_COMMIT_SHA -Dsonar.gitlab.ref_name=$CI_COMMIT_REF_NAME -Dsonar.gitlab.project_id=$CI_PROJECT_ID
+  allow_failure: false
 
+#issue2 want my artifacts to publsihed even in case the failure of test resport
 pages:
   stage: publish
   script:
@@ -43,28 +50,49 @@ pages:
     paths:
       - "public"
 
+# hardcoded names nileshvinys and i dont want to publish to docker where is my nexus ?
 buildimage:
   stage: deploy
   script:
-    - mvn package
+    - mvn package -DskipTests=true
     - docker build -t nileshvinsys/devops:$BASE_VERSION.$CI_PIPELINE_IID -f docker/Dockerfile .
     - docker login --username $DOCKER_USER --password $DOCKER_PASS
     - docker push  nileshvinsys/devops:$BASE_VERSION.$CI_PIPELINE_IID
 
+
+cleanforloadtest:
+  stage: cleanuploader
+  script:
+    - docker stop TESTCONTAINER
+    - docker rm TESTCONTAINER
+  allow_failure: true
+
+# hardcoded ip or host or port and build i want it to be parameterized
 loadtest:
   stage: loadtest
   script:
-    - mvn package
+    - mvn package -DskipTests=true
     - docker build -t nileshvinsys/devops:$BASE_VERSION.$CI_PIPELINE_IID -f docker/Dockerfile .
     - docker run  --name TESTCONTAINER -p8989:8080  -d nileshvinsys/devops:$BASE_VERSION.$CI_PIPELINE_IID
     - export PATH=$PATH:/opt/apache-jmeter-5.2.1/bin
     - jmeter -n -t loadtest.jmx  -l loadtest.jtl
-
-
+    - docker stop TESTCONTAINER
+    - docker rm TESTCONTAINER
+# finally push to prodcution on cloud where cloud keys ? and non hard coded format
 production:
   stage: pushtoproduction
   script:
-    - echo " Deploying to Production "
-    - echo " Will run sanity post deploy"
-    - echo " Will send mail on completion"
-    - echo " Will publish artifacts "
+    - echo "Deploying to Production "
+    - echo "Will run sanity post deploy"
+    - echo "Will send mail on completion"
+    - echo "Will publish artifacts"
+    - cd src/terraform
+    - terraform init
+    - terraform apply -var-file=prod.tfvars
+
+
+finalization:
+  stage: ansiblepush
+  script:
+    - ansible-playbook  play.yml
+  
