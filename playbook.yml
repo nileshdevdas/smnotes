@@ -1,0 +1,9 @@
+ hosts: mywebservers
+  tasks:
+  - name:  hello
+    command:  echo xxxxxxx
+  - name:  install httpd
+    yum:
+      name: httpd
+      state: absent
+~
