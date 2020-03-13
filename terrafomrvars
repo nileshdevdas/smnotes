@@ -1,0 +1,44 @@
+~~ 
+Add variables.tf
+
+
+variable "MYVPC" {
+  default = "10.0.0.0/16"
+}
+
+variable "subnet1" {
+  default = "10.0.0.0/24"
+}
+
+variable "subnet2" {
+  default = "10.0.1.0/24"
+}
+
+
+
+~~ 
+add a new file prod.tfvars 
+MYVPC = "172.0.0.0/16"
+subnet1 = "172.0.0.0/24"
+subnet2 = "172.0.1.0/24"
+
+
+
+~~ 
+in you main tf try outputing it out 
+
+output "printvpc" {
+  value = var.MYVPC
+}
+
+output "printsubnet1" {
+  value = var.subnet1
+}
+
+output "printsubnet2" {
+  value = var.subnet2
+}
+
+
+
+
