@@ -23,6 +23,11 @@ subnet1 = "172.0.0.0/24"
 subnet2 = "172.0.1.0/24"
 
 
+~~ execute the command
+terraform apply -var-file=prod.tfvar 
+
+
+
 
 ~~ 
 in you main tf try outputing it out 
