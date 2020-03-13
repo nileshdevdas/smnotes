@@ -1,0 +1,14 @@
+- hosts: host03.example.com
+  tasks:
+    - name: run echo command
+      command: /bin/echo hello world
+
+    - name: install apache
+      yum: name=httpd state=present
+
+    - name: copy files
+      copy:
+        src: ./index.html
+        dest: /root/index.html
+        owner: root
+        group: root
